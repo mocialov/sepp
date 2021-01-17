@@ -1,0 +1,15 @@
+id,name,price,quantity
+1,cucumbers,0.6,999
+2,tomatoes,1,999
+3,onions,0.5,999
+4,carrots,0.8,999
+5,beef,3,999
+6,pork,2,999
+7,chicken,1.5,999
+8,bacon,2.1,999
+9,oranges,1.3,999
+10,apples,0.8,999
+11,avocado,1.4,999
+12,mango,1.5,999
+13,cabbage,0.5,999
+14,cheese,1.5,999
