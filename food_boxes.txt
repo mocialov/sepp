@@ -1,0 +1,118 @@
+[
+        {
+          "id":1,
+          "name":"box a",
+          "contents": [
+            {
+              "id":1,
+              "name":"cucumbers",
+              "quantity":1
+            },
+            {
+              "id":2,
+              "name":"tomatoes",
+              "quantity":2
+            },
+            {
+              "id":6,
+              "name":"pork",
+              "quantity":1
+            }
+            ]
+        },
+
+        {
+          "id":2,
+          "name":"box b",
+          "contents": [
+            {
+              "id":1,
+              "name":"cucumbers",
+              "quantity":2
+            },
+            {
+              "id":3,
+              "name":"onions",
+              "quantity":1
+            },
+            {
+              "id":7,
+              "name":"chicken",
+              "quantity":1
+            }
+            ]
+        },
+
+        {
+          "id":3,
+          "name":"box c",
+          "contents": [
+            {
+              "id":3,
+              "name":"onions",
+              "quantity":1
+            },
+            {
+              "id":4,
+              "name":"carrots",
+              "quantity":2
+            },
+            {
+              "id":8,
+              "name":"bacon",
+              "quantity":1
+            }
+            ]
+        },
+
+        {
+          "id":4,
+          "name":"box d",
+          "contents": [
+            {
+              "id":13,
+              "name":"cabbage",
+              "quantity":1
+            },
+            {
+              "id":11,
+              "name":"avocado",
+              "quantity":1
+            },
+            {
+              "id":8,
+              "name":"bacon",
+              "quantity":1
+            },
+            {
+              "id":9,
+              "name":"oranges",
+              "quantity":1
+            }
+            ]
+        },
+
+
+        {
+          "id":5,
+          "name":"box e",
+          "contents": [
+            {
+              "id":9,
+              "name":"oranges",
+              "quantity":1
+            },
+            {
+              "id":11,
+              "name":"avocado",
+              "quantity":1
+            },
+            {
+              "id":12,
+              "name":"mango",
+              "quantity":1
+            }
+            ]
+        }
+
+]
