@@ -1,6 +1,8 @@
 [
         {
           "id":1,
+          "diet":"none",
+          "delivered_by":"catering",
           "name":"box a",
           "contents": [
             {
@@ -24,6 +26,8 @@
         {
           "id":2,
           "name":"box b",
+          "diet":"pollotarian",
+          "delivered_by":"catering",
           "contents": [
             {
               "id":1,
@@ -46,6 +50,8 @@
         {
           "id":3,
           "name":"box c",
+          "delivered_by":"catering",
+          "diet":"none",
           "contents": [
             {
               "id":3,
@@ -68,6 +74,8 @@
         {
           "id":4,
           "name":"box d",
+          "delivered_by":"catering",
+          "diet":"none",
           "contents": [
             {
               "id":13,
@@ -95,6 +103,8 @@
 
         {
           "id":5,
+          "diet":"vegan",
+          "delivered_by":"catering",
           "name":"box e",
           "contents": [
             {
