@@ -14,22 +14,19 @@ Returns: "[{\"id\": 1, \"diet\": \"none\", \"delivered_by\": \"catering\", \"nam
 Returns order_id
 
 3) curl --request POST -d '{"contents": [{"id":1,"name":"cucumbers","quantity":200},{"id":2,"name":"tomatoes","quantity":2}]}' -H 'Content-Type: application/json' '129.215.216.19:5000/editOrder?order_id=34&dateTime=1987-02-04_21:13:49'
-Just returns ‘done’’
+Returns True or False
 
 4) curl '129.215.216.19:5000/requestStatus?order_id=34'
 Returns status integer or -1 if order not found
 
-5) curl ‘129.215.216.19:5000/registerCateringCompany?business_name=catering1&postcode=eh0111’
+5) curl '129.215.216.19:5000/registerCateringCompany?business_name=catering1&postcode=eh0111'
 Returns: registered new / already registered
 
-6) cancel order
-Returns: done
+6) curl '129.215.216.19:5000/cancelOrder?order_id=34'
+Returns: true or false
 
-7)  curl ‘129.215.216.19:5000/registerSupermarket?business_name=catering1&postcode=eh0111’
+7)  curl '129.215.216.19:5000/registerSupermarket?business_name=catering1&postcode=eh0111'
 Returns: registered new / already registered
 
-TODO: 
-a) fake addresses for the new registered individuals 
-b) restrictions so that the user can only reduce number of fooditems 
-c) restrictions so that the user cannot cancel order if it has been packed
-d) atomic updates
+8) curl '129.215.216.19:5000/updateOrderStatus?order_id=42&newStatus=2'
+Returns: True or False
