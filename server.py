@@ -9,12 +9,15 @@ from flask import jsonify
 import ast
 import numpy as np
 import uuid
+import string
+import names
+from threading import Lock
 
 app = Flask(__name__)
 
 ########## globals
 
-patients_file = 'patients.txt'
+individuals_file = 'shielding_individuals.txt'
 orders_file = 'orders.csv'
 stock_file = 'stock.txt'
 food_boxes_file = 'food_boxes.txt'
@@ -23,72 +26,98 @@ providers_file2 = 'supermarkets.txt'
 
 known_items = ['cucumbers','tomatoes','onions','carrots','beef','pork','chicken','bacon','oranges','apples','avocado','mango','cabbage','cheese']
 
+#for atomic updates
+lock = Lock()
+
 ########## API info
 
 @app.route('/')
 def hello_world():
-    return '\
-register_patient?patient_id=...\n\
-order_box?urgency=...\n\
-order_status?order_id=...\n'
+    return ''
+
+####### helper classes
+
+class PHS(object):
+    @staticmethod
+    def verifyShieldingIndividual(CHI):
+        return ['EH'+str(random.randint(1,17))+' '+str(random.randint(1,9))+random.choice(string.ascii_letters).upper()+random.choice(string.ascii_letters).upper(),
+                ''.join([random.choice(string.ascii_letters) for _ in range(0, random.randint(5,9))]).lower(),
+                ''.join([random.choice(string.ascii_letters) for _ in range(0, random.randint(5,9))]).lower(),
+                ''.join([str(random.randint(0,10)) for _ in range(0, 11)])]
+
+
+class DeliveryStatus:
+    CANCELLED = 0
+    ORDERED = 1
+    DELIVERED = 2
+
+########
 
 ########### helper functions below
 
 def already_registered_provider(provider_id, postcode):
-    if os.path.isfile(providers_file):
-        with open(providers_file) as f:
-            all_providers = f.readlines()
-            all_providers = [item.split('\n')[0] for item in all_providers]
-            for a_provider in all_providers:
-                if str(provider_id) in a_provider.split(',')[0] and str(postcode) in a_provider.split(',')[1]:
-                    return True
+    with lock:
+        if os.path.isfile(providers_file):
+            with open(providers_file) as f:
+                all_providers = f.readlines()
+                all_providers = [item.split('\n')[0] for item in all_providers]
+                for a_provider in all_providers:
+                    if str(provider_id) in a_provider.split(',')[0] and str(postcode) in a_provider.split(',')[1]:
+                        return True
     return False
 
 def register_new_provider(provider_id, postcode):
-    with open(providers_file, 'a+') as f:
-        f.write(provider_id+","+postcode+"\n")
+    with lock:
+        with open(providers_file, 'a+') as f:
+            f.write(provider_id+","+postcode+"\n")
 
 
 def already_registered_provider_(provider_id, postcode):
-    if os.path.isfile(providers_file):
-        with open(providers_file2) as f:
-            all_providers = f.readlines()
-            all_providers = [item.split('\n')[0] for item in all_providers]
-            for a_provider in all_providers:
-                if str(provider_id) in a_provider.split(',')[0] and str(postcode) in a_provider.split(',')[1]:
-                    return True
+    with lock:
+        if os.path.isfile(providers_file):
+            with open(providers_file2) as f:
+                all_providers = f.readlines()
+                all_providers = [item.split('\n')[0] for item in all_providers]
+                for a_provider in all_providers:
+                    if str(provider_id) in a_provider.split(',')[0] and str(postcode) in a_provider.split(',')[1]:
+                        return True
     return False
 
 def register_new_provider_(provider_id, postcode):
-    with open(providers_file2, 'a+') as f:
-        f.write(provider_id+","+postcode+"\n")
+    with lock:
+        with open(providers_file2, 'a+') as f:
+            f.write(provider_id+","+postcode+"\n")
 
-def register_new_patient(patient_id):
-    with open(patients_file, "a+") as f:
-        f.write(patient_id+"\n")
+def register_new_individual(individual_id, postcode, name, surname, phone_number):
+    with lock:
+        with open(individuals_file, "a+") as f:
+            f.write(individual_id+","+postcode+","+name+","+surname+","+phone_number+"\n")
 
-def already_registered(patient_id):
-    if os.path.isfile(patients_file):
-        with open(patients_file) as f:
-            all_patients = f.readlines()
-            all_patients = [item.split('\n')[0] for item in all_patients]
-            if str(patient_id) in all_patients:
-                return True
+def already_registered(individual_id):
+    with lock:
+        if os.path.isfile(individuals_file):
+            with open(individuals_file) as f:
+                all_individuals = f.readlines()
+                all_individuals = [item.split(',')[0] for item in all_individuals]
+                if str(individual_id) in all_individuals:
+                    return True
     return False
 
 def get_order_status(order_id):
-    if os.path.isfile(orders_file):
-        with open(orders_file) as f:
-            all_orders = f.readlines()
-            for item in all_orders:
-                if str(item.split(',')[0]) == str(order_id):
-                    return item.split(',')[-1]
+    with lock:
+        if os.path.isfile(orders_file):
+            with open(orders_file) as f:
+                all_orders = f.readlines()
+                for item in all_orders:
+                    if str(item.split(',')[0]) == str(order_id):
+                        return item.split(',')[-1]
     return -1
 
 def get_stock_prices():
-    if os.path.isfile(stock_file):
-        with open(stock_file) as f:
-            all_prices = f.readlines()
+    with lock:
+        if os.path.isfile(stock_file):
+            with open(stock_file) as f:
+                all_prices = f.readlines()
 
     return all_prices[1:]
 
@@ -98,79 +127,96 @@ def lookup_item_price(prices, item_id):
             return item_price.split(',')[2]
 
 def place_order_(items_ordered, dateTime, individual_id):
-    if os.path.isfile(orders_file):
-        num_lines = sum(1 for line in open(orders_file))
-        new_order_id = num_lines+1
-        new_record = str(new_order_id)
-        with open(orders_file, 'a') as f:
+    with lock:
+        if os.path.isfile(orders_file):
+            num_lines = sum(1 for line in open(orders_file))
+            new_order_id = num_lines+1
+            new_record = str(new_order_id)
+            with open(orders_file, 'a') as f:
 
-            for i in range(1, len(known_items)):
-                new_record += ","+str(sum([item[1] if int(item[0]) == i else 0 for item in items_ordered])) if i in [item[0] for item in items_ordered] else ",0"
-            new_record += ","+individual_id
-            new_record += ","+dateTime
-            new_record += ",1" #not delivered
-            new_record += "\n"
+                for i in range(1, len(known_items)):
+                    new_record += ","+str(sum([item[1] if int(item[0]) == i else 0 for item in items_ordered])) if i in [item[0] for item in items_ordered] else ",0"
+                new_record += ","+individual_id
+                new_record += ","+dateTime
+                new_record += ","+str(DeliveryStatus.ORDERED)
+                new_record += "\n"
 
-            f.write(new_record)
+                f.write(new_record)
 
     return new_order_id
 
 
 def update_order_(items_ordered, order_id, dateTime):
-    if os.path.isfile(orders_file):
-        new_records = []
-        with open(orders_file) as f:
-            for an_order in f.readlines():
-                print (an_order.split(',')[0], order_id)
-                if an_order.split(',')[0] == order_id:
-                    print ('found')
-                    new_record = str(order_id)
-                    for i in range(1, len(known_items)):
-                        new_record += ","+str(sum([item[1] if int(item[0]) == i else 0 for item in items_ordered])) if i in [item[0] for item in items_ordered] else ",0"
-                    new_record += ","+an_order.split(",")[len(an_order.split(','))-3]
-                    new_record += ","+dateTime
-                    new_record += ",1"
-                    new_record += "\n"
-                    new_records.append(new_record)
-                else:
-                    new_records.append(an_order)
+    found = False
+    trying_to_increase_quantity = False
+    with lock:
+        if os.path.isfile(orders_file):
+            new_records = []
+            with open(orders_file) as f:
+                for an_order in f.readlines():
+                    print (an_order.split(',')[0], order_id)
+                    if an_order.split(',')[0] == order_id and an_order.split(',')[-1].rstrip('\n') == str(DeliveryStatus.ORDERED):
+                        print ('found')
+                        found = True
+                        new_record = str(order_id)
+                        for i in range(1, len(known_items)):
+                            if int(an_order.split(',')[i]) < int(sum([item[1] if int(item[0]) == i else 0 for item in items_ordered])):
+                                trying_to_increase_quantity = True
 
-        print (new_records)
-        with open(orders_file, 'w') as f:
-            for new_record in new_records:
-                f.write(new_record)
+                            new_record += ","+str(sum([item[1] if int(item[0]) == i else 0 for item in items_ordered])) if i in [item[0] for item in items_ordered] else ",0"
+                        new_record += ","+an_order.split(",")[len(an_order.split(','))-3]
+                        new_record += ","+dateTime
+                        new_record += ","+str(DeliveryStatus.ORDERED)
+                        new_record += "\n"
 
+                        if not trying_to_increase_quantity:
+                            new_records.append(new_record)
+                        else:
+                            new_records.append(an_order)
+                    else:
+                        new_records.append(an_order)
+
+            print (new_records)
+            with open(orders_file, 'w') as f:
+                for new_record in new_records:
+                    f.write(new_record)
+    return found if not trying_to_increase_quantity else not found
 
 
 def update_order_status(order_id, new_status):
-    if os.path.isfile(orders_file):
-        new_records = []
-        with open(orders_file) as f:
-            for an_order in f.readlines():
-                print (an_order.split(',')[0], order_id)
-                if an_order.split(',')[0] == order_id:
-                    an_order = an_order.split(',')
-                    an_order[-1] = str(new_status)+'\n'
-                    new_records.append(','.join(an_order))
-                else:
-                    new_records.append(an_order)
+    found = False
+    with lock:
+        if os.path.isfile(orders_file):
+            new_records = []
+            with open(orders_file) as f:
+                for an_order in f.readlines():
+                    print (an_order.split(',')[0], order_id)
+                    if an_order.split(',')[0] == order_id and an_order.split(',')[-1].rstrip('\n') != str(DeliveryStatus.CANCELLED) and an_order.split(',')[-1].rstrip('\n') != str(new_status) and an_order.split(',')[-1].rstrip('\n') != str(DeliveryStatus.DELIVERED):
+                        found = True
+                        an_order = an_order.split(',')
+                        an_order[-1] = str(new_status)+'\n'
+                        new_records.append(','.join(an_order))
+                    else:
+                        new_records.append(an_order)
 
-        print (new_records)
-        with open(orders_file, 'w') as f:
-            for new_record in new_records:
-                f.write(new_record)
+            print (new_records)
+            with open(orders_file, 'w') as f:
+                for new_record in new_records:
+                    f.write(new_record)
+
+    return found
 
 
-def patient_is_registered(patient_id):
-    with open('patients.txt') as f:
-        for a_patient in f.readlines():
-            a_patient = a_patient.rstrip('\n')
-            print (patient_id, a_patient, patient_id==a_patient)
-            if str(patient_id) == str(a_patient):
-                return True
+def individual_is_registered(individual_id):
+    with lock:
+        with open(individuals_file) as f:
+            for a_individual in f.readlines():
+                a_individual = a_individual.rstrip('\n').split(',')[0]
+                print (individual_id, a_individual, individual_id==a_individual)
+                if str(individual_id) == str(a_individual):
+                    return True
 
     return False
-
 
 ############ endpoints below
 
@@ -205,14 +251,16 @@ def registerSupermarket():
 
 
 @app.route('/registerShieldingIndividual')
-def register_patient():
+def register_individual():
     if 'CHI' in request.args:
-        patient_id = request.args.get('CHI')
+        individual_id = request.args.get('CHI')
 
-        if already_registered(patient_id):
+        postcode, name, surname, phone_number = PHS.verifyShieldingIndividual(individual_id)
+
+        if already_registered(individual_id):
             return ('already registered\n')
         else:
-            register_new_patient(patient_id)
+            register_new_individual(individual_id, postcode, name, surname, phone_number)
             return ('registered new\n')
 
     return 'must specify CHI'
@@ -244,11 +292,11 @@ def cancelOrder():
 
         new_status = 0
 
-        update_order_status(order_id, new_status)
+        found = update_order_status(order_id, DeliveryStatus.CANCELLED)
 
-        return 'Done'
+        return str(found)
 
-    return 'something is wrong'
+    return 'must provide order_id'
 
 
 @app.route('/showFoodBox')
@@ -257,29 +305,32 @@ def get_food_boxes():
         order_option = request.args.get('orderOption')
         dietary_preference = request.args.get('dietaryPreference')
 
-        with open(food_boxes_file) as f:
-            json_data = json.load(f)
+        with lock:
+            with open(food_boxes_file) as f:
+                json_data = json.load(f)
 
-            json_data = [x for x in json_data if x['diet'] == dietary_preference and x['delivered_by'] == order_option]
-            json_data = json.dumps(json_data)
+                json_data = [x for x in json_data if x['diet'] == dietary_preference and x['delivered_by'] == order_option]
+                json_data = json.dumps(json_data)
 
-            return jsonify(json_data)
+                return jsonify(json_data)
 
     return 'something is wrong'
 
 @app.route('/get_prices')
 def get_prices():
-    with open(stock_file) as f:
-        all_prices = f.readlines()[1:]
-        all_prices = [[item.split(',')[0], item.split(',')[1], item.split(',')[2]] for item in all_prices]
-        print (all_prices)
-        return str(np.array(all_prices).flatten())
+    with lock:
+        with open(stock_file) as f:
+            all_prices = f.readlines()[1:]
+            all_prices = [[item.split(',')[0], item.split(',')[1], item.split(',')[2]] for item in all_prices]
+            print (all_prices)
+            return str(np.array(all_prices).flatten())
 
 
 @app.route('/placeOrder', methods=['POST'])
 def placeOrder():
     total_price = 0
-    if 'dateTime' in request.args and 'individual_id' in request.args and patient_is_registered(request.args.get('individual_id')):
+    individual_max = False
+    if 'dateTime' in request.args and 'individual_id' in request.args and individual_is_registered(request.args.get('individual_id')):
         if request.json != None:
             dateTime = " ".join(request.args['dateTime'].split("_"))
             individual_id = request.args['individual_id']
@@ -290,16 +341,23 @@ def placeOrder():
 
             a_box = json.loads(str(request.json).replace("'", "\""))
 
+            total_quantity = 0
             for order_item in a_box['contents']:
                 items_ordered.append((order_item['id'], order_item['quantity']))
                 order_item_price = lookup_item_price(prices, order_item['id'])
                 total_price += float(order_item_price) * int(order_item['quantity'])
+                total_quantity += int(order_item['quantity'])
+                if int(order_item['quantity']) >= 3:
+                    individual_max = True
 
-            new_order_id = place_order_(items_ordered, dateTime, individual_id)
+            if total_quantity <= 10 and not individual_max:
+                new_order_id = place_order_(items_ordered, dateTime, individual_id)
+            else:
+                new_order_id = -1
 
         return str(new_order_id)# + "_" + str(total_price)
     else:
-        return 'no patient id provided'
+        return 'must provide dateTime, individual_id, and the individual must be registered before placing an order'
 
 
 @app.route('/editOrder', methods=['POST'])
@@ -316,90 +374,42 @@ def editOrder():
             for order_item in a_box['contents']:
                 items_ordered.append((order_item['id'], order_item['quantity']))
 
-            update_order_(items_ordered, request.args['order_id'], dateTime)
+            updated = update_order_(items_ordered, request.args['order_id'], dateTime)
 
-            return 'Done'
-
-
-@app.route('/place_order', methods=['POST'])
-def place_order():
-    if 'order_id' in request.args:
-        #update order
-
-        if request.json != None:
-
-            items_ordered = []
-
-            a_box = json.loads(str(request.json).replace("'", "\""))
-
-            for order_item in a_box['contents']:
-                items_ordered.append((order_item['id'], order_item['quantity']))
-
-            update_order_(items_ordered, request.args['order_id'])
-
-            return 'Done'
-
+            return str(updated)
     else:
-        #new order
+        return 'must provide dateTime and order_id'
 
-        total_price = 0
-        if 'patient_id' in request.args and patient_is_registered(request.args.get('patient_id')):
-            if request.json != None:
 
-                items_ordered = []
-
-                prices = get_stock_prices()
-
-                a_box = json.loads(str(request.json).replace("'", "\""))
-
-                for order_item in a_box['contents']:
-                    items_ordered.append((order_item['id'], order_item['quantity']))
-                    order_item_price = lookup_item_price(prices, order_item['id'])
-                    total_price += float(order_item_price) * int(order_item['quantity'])
-
-                new_order_id = place_order_(items_ordered)
-
-            return str(new_order_id)# + "_" + str(total_price)
-
-        else:
-            return 'no patient id provided'
 
 @app.route('/request_order_status')
 def request_order_status():
     if 'order_id' in request.args:
         order_status = -2
 
-        with open(orders_file) as f:
-            all_orders = f.readlines()[1:]
+        with lock:
+            with open(orders_file) as f:
+                all_orders = f.readlines()[1:]
 
-            order_status = sum([int(item.split('\n')[0].split(',')[-1]) if int(item.split('\n')[0].split(',')[0])==int(request.args['order_id']) else 0 for item in all_orders])
+                order_status = sum([int(item.split('\n')[0].split(',')[-1]) if int(item.split('\n')[0].split(',')[0])==int(request.args['order_id']) else 0 for item in all_orders])
 
     return str(order_status)
 
-@app.route('/cancel_order')
-def cancel_order():
-    if 'order_id' in request.args:
 
-        found = False
+@app.route('/updateOrderStatus')
+def update_order_status_():
+    if 'order_id' in request.args and 'newStatus' in request.args:
+        order_id = request.args.get('order_id')
+        if request.args['newStatus'] == str(DeliveryStatus.CANCELLED):
+            new_status = DeliveryStatus.CANCELLED
+        elif request.args['newStatus'] == str(DeliveryStatus.ORDERED):
+            new_status = DeliveryStatus.ORDERED
+        elif request.args['newStatus'] == str(DeliveryStatus.DELIVERED):
+            new_status = DeliveryStatus.DELIVERED
 
-        with open(orders_file, 'r+') as f:
-            all_orders = f.readlines()[1:]
-
-            for idx, an_order in enumerate(all_orders):
-                if int(an_order.split(',')[0]) == int(request.args['order_id']):
-                    found = True
-                    all_orders[idx] = ','.join(an_order.split('\n')[0].split(',')[:-1]) + ',-1\n'
-
-            f.truncate(0)
-
-        with open(orders_file, 'r+') as f:
-            f.write('%s' % 'order_id,'+','.join(known_items)+',status\n')
-            for updated_row in all_orders:
-                f.write("%s" % updated_row)
-
-    return 1 if found else -1
-
-
+        found = update_order_status(order_id, new_status)
+        return str(found)
+    return 'must provide order_id and newStatus'
 
 if __name__ == '__main__':
     app.run(host= '0.0.0.0', threaded=False, processes=10)
