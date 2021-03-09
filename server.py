@@ -12,6 +12,7 @@ import uuid
 import string
 import names
 from threading import Lock
+from time import gmtime, strftime
 
 app = Flask(__name__)
 
@@ -47,9 +48,11 @@ class PHS(object):
 
 
 class DeliveryStatus:
-    CANCELLED = 0
-    ORDERED = 1
-    DELIVERED = 2
+    NONE = 0
+    PACKED = 1
+    DISPATCHED = 2
+    DELIVERED = 3
+    CANCELLED = 4
 
 ########
 
@@ -137,8 +140,12 @@ def place_order_(items_ordered, dateTime, individual_id):
                 for i in range(1, len(known_items)):
                     new_record += ","+str(sum([item[1] if int(item[0]) == i else 0 for item in items_ordered])) if i in [item[0] for item in items_ordered] else ",0"
                 new_record += ","+individual_id
-                new_record += ","+dateTime
-                new_record += ","+str(DeliveryStatus.ORDERED)
+                new_record += ","+dateTime #deliverby
+                new_record += ","+strftime("%Y-%m-%dT%H:%M:%S", gmtime()) #ordered time
+                new_record += "," #packed time
+                new_record += "," #dispatched time
+                new_record += "," #delivered time
+                new_record += ","+str(DeliveryStatus.NONE)
                 new_record += "\n"
 
                 f.write(new_record)
@@ -155,7 +162,7 @@ def update_order_(items_ordered, order_id, dateTime):
             with open(orders_file) as f:
                 for an_order in f.readlines():
                     print (an_order.split(',')[0], order_id)
-                    if an_order.split(',')[0] == order_id and an_order.split(',')[-1].rstrip('\n') == str(DeliveryStatus.ORDERED):
+                    if an_order.split(',')[0] == order_id and an_order.split(',')[-1].rstrip('\n') == str(DeliveryStatus.NONE):
                         print ('found')
                         found = True
                         new_record = str(order_id)
@@ -164,9 +171,11 @@ def update_order_(items_ordered, order_id, dateTime):
                                 trying_to_increase_quantity = True
 
                             new_record += ","+str(sum([item[1] if int(item[0]) == i else 0 for item in items_ordered])) if i in [item[0] for item in items_ordered] else ",0"
-                        new_record += ","+an_order.split(",")[len(an_order.split(','))-3]
+                        new_record += ","+an_order.split(",")[len(an_order.split(','))-7]
                         new_record += ","+dateTime
-                        new_record += ","+str(DeliveryStatus.ORDERED)
+                        new_record += ","+an_order.split(",")[len(an_order.split(','))-5]
+                        new_record += ",,,"
+                        new_record += ","+str(DeliveryStatus.NONE)
                         new_record += "\n"
 
                         if not trying_to_increase_quantity:
@@ -191,10 +200,20 @@ def update_order_status(order_id, new_status):
             with open(orders_file) as f:
                 for an_order in f.readlines():
                     print (an_order.split(',')[0], order_id)
-                    if an_order.split(',')[0] == order_id and an_order.split(',')[-1].rstrip('\n') != str(DeliveryStatus.CANCELLED) and an_order.split(',')[-1].rstrip('\n') != str(new_status) and an_order.split(',')[-1].rstrip('\n') != str(DeliveryStatus.DELIVERED):
+                    if an_order.split(',')[0] == order_id and \
+                        int(an_order.split(',')[-1].rstrip('\n')) <= int(new_status)%4 and \
+                        int(new_status)%4 - int(an_order.split(',')[-1].rstrip('\n')) == 1:
                         found = True
                         an_order = an_order.split(',')
                         an_order[-1] = str(new_status)+'\n'
+
+                        if new_status == DeliveryStatus.PACKED:
+                            an_order[-4] = strftime("%Y-%m-%dT%H:%M:%S", gmtime())
+                        elif new_status == DeliveryStatus.DISPATCHED:
+                            an_order[-3] = strftime("%Y-%m-%dT%H:%M:%S", gmtime())
+                        elif new_status == DeliveryStatus.DELIVERED:
+                            an_order[-2] = strftime("%Y-%m-%dT%H:%M:%S", gmtime())
+
                         new_records.append(','.join(an_order))
                     else:
                         new_records.append(an_order)
@@ -301,16 +320,18 @@ def cancelOrder():
 
 @app.route('/showFoodBox')
 def get_food_boxes():
-    if 'orderOption' in request.args and 'dietaryPreference' in request.args:
-        order_option = request.args.get('orderOption')
-        dietary_preference = request.args.get('dietaryPreference')
+    if True:#if 'orderOption' in request.args and 'dietaryPreference' in request.args:
+        order_option = request.args.get('orderOption', default='', type=str)
+        dietary_preference = request.args.get('dietaryPreference', default='', type=str)
 
         with lock:
             with open(food_boxes_file) as f:
                 json_data = json.load(f)
 
-                json_data = [x for x in json_data if x['diet'] == dietary_preference and x['delivered_by'] == order_option]
-                json_data = json.dumps(json_data)
+                if dietary_preference == '':
+                    json_data = [x for x in json_data]
+                else:
+                    json_data = [x for x in json_data if x['diet'] == dietary_preference]
 
                 return jsonify(json_data)
 
@@ -400,15 +421,20 @@ def request_order_status():
 def update_order_status_():
     if 'order_id' in request.args and 'newStatus' in request.args:
         order_id = request.args.get('order_id')
-        if request.args['newStatus'] == str(DeliveryStatus.CANCELLED):
-            new_status = DeliveryStatus.CANCELLED
-        elif request.args['newStatus'] == str(DeliveryStatus.ORDERED):
-            new_status = DeliveryStatus.ORDERED
-        elif request.args['newStatus'] == str(DeliveryStatus.DELIVERED):
+        new_status = None
+        if request.args['newStatus'].lower() == 'delivered':
             new_status = DeliveryStatus.DELIVERED
+        elif request.args['newStatus'].lower() == 'packed':
+            new_status = DeliveryStatus.PACKED
+        elif request.args['newStatus'].lower() == 'dispatched':
+            new_status = DeliveryStatus.DISPATCHED
 
-        found = update_order_status(order_id, new_status)
-        return str(found)
+        if new_status != None:
+            found = update_order_status(order_id, new_status)
+            return str(found)
+        else:
+            return 'can either deliver, pack, or dispatch the order'
+
     return 'must provide order_id and newStatus'
 
 if __name__ == '__main__':
