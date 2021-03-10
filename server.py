@@ -368,10 +368,10 @@ def placeOrder():
                 order_item_price = lookup_item_price(prices, order_item['id'])
                 total_price += float(order_item_price) * int(order_item['quantity'])
                 total_quantity += int(order_item['quantity'])
-                if int(order_item['quantity']) >= 3:
-                    individual_max = True
+                #if int(order_item['quantity']) >= 3:
+                #    individual_max = True
 
-            if total_quantity <= 10 and not individual_max:
+            if True:#if total_quantity <= 10 and not individual_max:
                 new_order_id = place_order_(items_ordered, dateTime, individual_id)
             else:
                 new_order_id = -1
