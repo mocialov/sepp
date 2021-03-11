@@ -284,17 +284,6 @@ def register_individual():
 
     return 'must specify CHI'
 
-@app.route('/order_box')
-def order_box():
-    if 'urgency' in request.args:
-        urgency = request.args.get('urgency')
-
-        if urgency == '1':
-            return ('need to be delivered urgently')
-        else:
-            return ('not urgent delivery')
-
-
 @app.route('/requestStatus')
 def order_status():
     if 'order_id' in request.args:
@@ -337,16 +326,6 @@ def get_food_boxes():
                 return jsonify(json_data)
 
     return 'something is wrong'
-
-@app.route('/get_prices')
-def get_prices():
-    with lock:
-        with open(stock_file) as f:
-            all_prices = f.readlines()[1:]
-            all_prices = [[item.split(',')[0], item.split(',')[1], item.split(',')[2]] for item in all_prices]
-            print (all_prices)
-            return str(np.array(all_prices).flatten())
-
 
 @app.route('/placeOrder', methods=['POST'])
 def placeOrder():
@@ -401,22 +380,6 @@ def editOrder():
             return str(updated)
     else:
         return 'must provide dateTime and order_id'
-
-
-
-@app.route('/request_order_status')
-def request_order_status():
-    if 'order_id' in request.args:
-        order_status = -2
-
-        with lock:
-            with open(orders_file) as f:
-                all_orders = f.readlines()[1:]
-
-                order_status = sum([int(item.split('\n')[0].split(',')[-1]) if int(item.split('\n')[0].split(',')[0])==int(request.args['order_id']) else 0 for item in all_orders])
-
-    return str(order_status)
-
 
 @app.route('/updateOrderStatus')
 def update_order_status_():
