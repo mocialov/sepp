@@ -303,6 +303,7 @@ def order_status():
         order_status = get_order_status(order_id)
 
         return str(order_status)
+    return 'order_id not provided'
 
 @app.route('/cancelOrder')
 def cancelOrder():
