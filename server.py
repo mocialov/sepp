@@ -193,26 +193,36 @@ def update_order_(items_ordered, order_id, dateTime):
 
 
 def update_order_status(order_id, new_status):
-    found = False
+    changed = False
     with lock:
         if os.path.isfile(orders_file):
             new_records = []
             with open(orders_file) as f:
                 for an_order in f.readlines():
                     print (an_order.split(',')[0], order_id)
-                    if an_order.split(',')[0] == order_id and \
-                        int(an_order.split(',')[-1].rstrip('\n')) <= int(new_status)%4 and \
-                        int(new_status)%4 - int(an_order.split(',')[-1].rstrip('\n')) == 1:
-                        found = True
-                        an_order = an_order.split(',')
-                        an_order[-1] = str(new_status)+'\n'
+                    if an_order.split(',')[0] == order_id:
 
-                        if new_status == DeliveryStatus.PACKED:
-                            an_order[-4] = strftime("%Y-%m-%dT%H:%M:%S", gmtime())
-                        elif new_status == DeliveryStatus.DISPATCHED:
-                            an_order[-3] = strftime("%Y-%m-%dT%H:%M:%S", gmtime())
-                        elif new_status == DeliveryStatus.DELIVERED:
-                            an_order[-2] = strftime("%Y-%m-%dT%H:%M:%S", gmtime())
+                        an_order = an_order.split(',')
+
+                        current_status = int(an_order[-1])
+
+                        if new_status == DeliveryStatus.CANCELLED:
+                            if current_status != DeliveryStatus.DISPATCHED and \
+                                current_status != DeliveryStatus.DELIVERED and \
+                                current_status != DeliveryStatus.CANCELLED:
+                                an_order[-1] = str(new_status)+'\n'
+                                changed = True
+                        else:
+                            if new_status > current_status:
+                                an_order[-1] = str(new_status)+'\n'
+                                changed = True
+
+                                if new_status == DeliveryStatus.PACKED:
+                                    an_order[-4] = strftime("%Y-%m-%dT%H:%M:%S", gmtime())
+                                elif new_status == DeliveryStatus.DISPATCHED:
+                                    an_order[-3] = strftime("%Y-%m-%dT%H:%M:%S", gmtime())
+                                elif new_status == DeliveryStatus.DELIVERED:
+                                    an_order[-2] = strftime("%Y-%m-%dT%H:%M:%S", gmtime())
 
                         new_records.append(','.join(an_order))
                     else:
@@ -223,7 +233,7 @@ def update_order_status(order_id, new_status):
                 for new_record in new_records:
                     f.write(new_record)
 
-    return found
+    return changed
 
 
 def individual_is_registered(individual_id):
