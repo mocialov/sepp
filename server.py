@@ -129,7 +129,7 @@ def lookup_item_price(prices, item_id):
         if int(item_id) == int(item_price.split(',')[0]):
             return item_price.split(',')[2]
 
-def place_order_(items_ordered, dateTime, individual_id):
+def place_order_(items_ordered, individual_id):
     with lock:
         if os.path.isfile(orders_file):
             num_lines = sum(1 for line in open(orders_file))
@@ -140,7 +140,6 @@ def place_order_(items_ordered, dateTime, individual_id):
                 for i in range(1, len(known_items)):
                     new_record += ","+str(sum([item[1] if int(item[0]) == i else 0 for item in items_ordered])) if i in [item[0] for item in items_ordered] else ",0"
                 new_record += ","+individual_id
-                new_record += ","+dateTime #deliverby
                 new_record += ","+strftime("%Y-%m-%dT%H:%M:%S", gmtime()) #ordered time
                 new_record += "," #packed time
                 new_record += "," #dispatched time
@@ -153,7 +152,7 @@ def place_order_(items_ordered, dateTime, individual_id):
     return new_order_id
 
 
-def update_order_(items_ordered, order_id, dateTime):
+def update_order_(items_ordered, order_id):
     found = False
     trying_to_increase_quantity = False
     with lock:
@@ -171,10 +170,10 @@ def update_order_(items_ordered, order_id, dateTime):
                                 trying_to_increase_quantity = True
 
                             new_record += ","+str(sum([item[1] if int(item[0]) == i else 0 for item in items_ordered])) if i in [item[0] for item in items_ordered] else ",0"
-                        new_record += ","+an_order.split(",")[len(an_order.split(','))-7]
-                        new_record += ","+dateTime
+                        new_record += ","+an_order.split(",")[len(an_order.split(','))-6]
                         new_record += ","+an_order.split(",")[len(an_order.split(','))-5]
-                        new_record += ",,,"
+                        new_record += ","+an_order.split(",")[len(an_order.split(','))-4]
+                        new_record += ",,"
                         new_record += ","+str(DeliveryStatus.NONE)
                         new_record += "\n"
 
@@ -294,6 +293,7 @@ def register_individual():
 
     return 'must specify CHI'
 
+
 @app.route('/requestStatus')
 def order_status():
     if 'order_id' in request.args:
@@ -302,7 +302,6 @@ def order_status():
         order_status = get_order_status(order_id)
 
         return str(order_status)
-    return 'order_id not provided'
 
 @app.route('/cancelOrder')
 def cancelOrder():
@@ -341,9 +340,9 @@ def get_food_boxes():
 def placeOrder():
     total_price = 0
     individual_max = False
-    if 'dateTime' in request.args and 'individual_id' in request.args and individual_is_registered(request.args.get('individual_id')):
+    if 'individual_id' in request.args and individual_is_registered(request.args.get('individual_id')):
         if request.json != None:
-            dateTime = " ".join(request.args['dateTime'].split("_"))
+            #dateTime = " ".join(request.args['dateTime'].split("_"))
             individual_id = request.args['individual_id']
 
             items_ordered = []
@@ -361,22 +360,22 @@ def placeOrder():
                 #if int(order_item['quantity']) >= 3:
                 #    individual_max = True
 
-            if True:#if total_quantity <= 10 and not individual_max:
-                new_order_id = place_order_(items_ordered, dateTime, individual_id)
+            if True:#total_quantity <= 10 and not individual_max:
+                new_order_id = place_order_(items_ordered, individual_id)
             else:
                 new_order_id = -1
 
         return str(new_order_id)# + "_" + str(total_price)
     else:
-        return 'must provide dateTime, individual_id, and the individual must be registered before placing an order'
+        return 'must provide individual_id, and the individual must be registered before placing an order'
 
 
 @app.route('/editOrder', methods=['POST'])
 def editOrder():
-    if 'dateTime' in request.args and 'order_id' in request.args:
+    if 'order_id' in request.args:
 
         if request.json != None:
-            dateTime = " ".join(request.args['dateTime'].split("_"))
+            #dateTime = " ".join(request.args['dateTime'].split("_"))
 
             items_ordered = []
 
@@ -385,11 +384,12 @@ def editOrder():
             for order_item in a_box['contents']:
                 items_ordered.append((order_item['id'], order_item['quantity']))
 
-            updated = update_order_(items_ordered, request.args['order_id'], dateTime)
+            updated = update_order_(items_ordered, request.args['order_id'])
 
             return str(updated)
     else:
-        return 'must provide dateTime and order_id'
+        return 'must provide order_id'
+
 
 @app.route('/updateOrderStatus')
 def update_order_status_():
@@ -410,6 +410,54 @@ def update_order_status_():
             return 'can either deliver, pack, or dispatch the order'
 
     return 'must provide order_id and newStatus'
+
+@app.route('/distance')
+def distance():
+    if 'postcode1' in request.args and 'postcode2' in request.args:
+        postcode1 = request.args.get('postcode1')
+        postcode2 = request.args.get('postcode2')
+
+        edinburgh_diameter = 18334 #m
+        max_cost = 99*10 + 25*2 + 9
+
+        postcode1 = postcode1.replace('EH', '') #assuming edinburgh
+        postcode2 = postcode2.replace('EH', '') #assuming edinburgh
+
+        postcode1 = postcode1.split('_')
+        postcode1_first_part = postcode1[0]
+        postcode1_second_part = postcode1[1]
+
+        postcode2 = postcode2.split('_')
+        postcode2_first_part = postcode2[0]
+        postcode2_second_part = postcode2[1]
+
+        first_part_postcode_differences = abs(int(postcode1_first_part) - int(postcode2_first_part))
+
+        total_cost = 1 * (first_part_postcode_differences * 10)
+
+        for idx, _ in enumerate(postcode1_second_part):
+
+            letter_cost = 0
+
+            if postcode1_second_part[idx].lower() in string.ascii_lowercase and postcode2_second_part[idx].lower() in string.ascii_lowercase:
+                letter1 = string.ascii_lowercase.index(postcode1_second_part[idx].lower())
+                letter2 = string.ascii_lowercase.index(postcode2_second_part[idx].lower())
+                letter_cost = abs(letter1 - letter2)
+            elif postcode1_second_part[idx].lower().isdigit() and postcode2_second_part[idx].lower().isdigit():
+                letter_cost = abs(int(postcode1_second_part[idx].lower()) - int(postcode2_second_part[idx].lower()))
+
+            total_cost += letter_cost
+
+        return str(edinburgh_diameter * total_cost / max_cost)
+
+@app.route('/getCaterers')
+def get_caterers():
+    with lock:
+        with open(providers_file) as f:
+            content = f.readlines()
+            content = [item.rstrip('\n') for item in content]
+    return jsonify(content)
+
 
 if __name__ == '__main__':
     app.run(host= '0.0.0.0', threaded=False, processes=10)
