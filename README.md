@@ -17,19 +17,25 @@ Returns True or False
 Returns status integer or -1 if order not found
 
 5) curl 'localhost:5000/registerCateringCompany?business_name=catering1&postcode=eh0111'
+
 Returns: registered new / already registered
 
 6) curl 'localhost:5000/cancelOrder?order_id=42'
+
 Returns: true or false
 
 7) curl 'localhost:5000/registerSupermarket?business_name=catering1&postcode=eh0111'
+
 Returns: registered new / already registered
 
 8) curl 'localhost:5000/updateOrderStatus?order_id=42&newStatus=packed' (packed/dispatched/delivered)
+
 Returns: True or False
 
 9) curl 'localhost:5000/getCaterers'
+
 Returns: ["catering1,eh0111","catering1,eh0111","catering1,eh0111","catering1,eh0111","catering1,eh0111","catering1,eh0111","catering1,eh0112","catering1,eh0113","catering1,eh0114"]
 
 10) curl 'localhost:5000/distance?postcode1=EH11_2DR&postcode2=EH11_3DR'
+
 Returns: 17.477597712106768 (in meters [not actual distance])
