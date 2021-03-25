@@ -41,6 +41,6 @@ Returns: True or False
 
 Returns: ["catering1,eh0111","catering1,eh0111","catering1,eh0111","catering1,eh0111","catering1,eh0111","catering1,eh0111","catering1,eh0112","catering1,eh0113","catering1,eh0114"]
 
-10) curl 'localhost:5000/distance?postcode1=EH11_2DR&postcode2=EH11_3DR'
+10) curl 'localhost:5000/distance?postcode1=EH11_2DR&postcode2=EH11_3DR' (Only 'EH')
 
 Returns: 17.477597712106768 (in meters [not actual distance])
