@@ -20,6 +20,7 @@ app = Flask(__name__)
 
 individuals_file = 'shielding_individuals.txt'
 orders_file = 'orders.csv'
+sup_orders_file = 'supermarket_orders.csv'
 stock_file = 'stock.txt'
 food_boxes_file = 'food_boxes.txt'
 providers_file = 'providers.txt'
@@ -65,14 +66,16 @@ def already_registered_provider(provider_id, postcode):
                 all_providers = f.readlines()
                 all_providers = [item.split('\n')[0] for item in all_providers]
                 for a_provider in all_providers:
-                    if str(provider_id) in a_provider.split(',')[0] and str(postcode) in a_provider.split(',')[1]:
+                    if str(provider_id) in a_provider.split(',')[1] and str(postcode) in a_provider.split(',')[2]:
                         return True
     return False
 
 def register_new_provider(provider_id, postcode):
     with lock:
+        num_lines = sum(1 for line in open(providers_file))
         with open(providers_file, 'a+') as f:
-            f.write(provider_id+","+postcode+"\n")
+            f.write(str(num_lines)+","+provider_id+","+postcode+"\n")
+            return num_lines
 
 
 def already_registered_provider_(provider_id, postcode):
@@ -82,14 +85,16 @@ def already_registered_provider_(provider_id, postcode):
                 all_providers = f.readlines()
                 all_providers = [item.split('\n')[0] for item in all_providers]
                 for a_provider in all_providers:
-                    if str(provider_id) in a_provider.split(',')[0] and str(postcode) in a_provider.split(',')[1]:
+                    if str(provider_id) in a_provider.split(',')[1] and str(postcode) in a_provider.split(',')[2]:
                         return True
     return False
 
 def register_new_provider_(provider_id, postcode):
     with lock:
+        num_lines = sum(1 for line in open(providers_file2))
         with open(providers_file2, 'a+') as f:
-            f.write(provider_id+","+postcode+"\n")
+            f.write(str(num_lines)+","+provider_id+","+postcode+"\n")
+            return num_lines
 
 def register_new_individual(individual_id, postcode, name, surname, phone_number):
     with lock:
@@ -129,7 +134,7 @@ def lookup_item_price(prices, item_id):
         if int(item_id) == int(item_price.split(',')[0]):
             return item_price.split(',')[2]
 
-def place_order_(items_ordered, individual_id):
+def place_order_(items_ordered, individual_id, catering_id):
     with lock:
         if os.path.isfile(orders_file):
             num_lines = sum(1 for line in open(orders_file))
@@ -137,9 +142,10 @@ def place_order_(items_ordered, individual_id):
             new_record = str(new_order_id)
             with open(orders_file, 'a') as f:
 
-                for i in range(1, len(known_items)):
+                for i in range(1, len(known_items)+1):
                     new_record += ","+str(sum([item[1] if int(item[0]) == i else 0 for item in items_ordered])) if i in [item[0] for item in items_ordered] else ",0"
                 new_record += ","+individual_id
+                new_record += ","+catering_id
                 new_record += ","+strftime("%Y-%m-%dT%H:%M:%S", gmtime()) #ordered time
                 new_record += "," #packed time
                 new_record += "," #dispatched time
@@ -165,11 +171,12 @@ def update_order_(items_ordered, order_id):
                         print ('found')
                         found = True
                         new_record = str(order_id)
-                        for i in range(1, len(known_items)):
+                        for i in range(1, len(known_items)+1):
                             if int(an_order.split(',')[i]) < int(sum([item[1] if int(item[0]) == i else 0 for item in items_ordered])):
                                 trying_to_increase_quantity = True
 
                             new_record += ","+str(sum([item[1] if int(item[0]) == i else 0 for item in items_ordered])) if i in [item[0] for item in items_ordered] else ",0"
+                        new_record += ","+an_order.split(",")[len(an_order.split(','))-7]
                         new_record += ","+an_order.split(",")[len(an_order.split(','))-6]
                         new_record += ","+an_order.split(",")[len(an_order.split(','))-5]
                         new_record += ","+an_order.split(",")[len(an_order.split(','))-4]
@@ -191,12 +198,12 @@ def update_order_(items_ordered, order_id):
     return found if not trying_to_increase_quantity else not found
 
 
-def update_order_status(order_id, new_status):
+def update_order_status(order_id, new_status, dst):
     changed = False
     with lock:
-        if os.path.isfile(orders_file):
+        if os.path.isfile(orders_file if dst == 'caterer' else sup_orders_file):
             new_records = []
-            with open(orders_file) as f:
+            with open(orders_file if dst == 'caterer' else sup_orders_file) as f:
                 for an_order in f.readlines():
                     print (an_order.split(',')[0], order_id)
                     if an_order.split(',')[0] == order_id:
@@ -228,11 +235,12 @@ def update_order_status(order_id, new_status):
                         new_records.append(an_order)
 
             print (new_records)
-            with open(orders_file, 'w') as f:
+            with open(orders_file if dst=='caterer' else sup_orders_file, 'w') as f:
                 for new_record in new_records:
                     f.write(new_record)
 
     return changed
+
 
 
 def individual_is_registered(individual_id):
@@ -246,6 +254,36 @@ def individual_is_registered(individual_id):
 
     return False
 
+def catering_is_registered(business_name, business_postcode):
+    print ("finding catering", business_name, business_postcode)
+    with lock:
+        with open(providers_file) as f:
+            for a_catering in f.readlines():
+                a_catering = a_catering.rstrip('\n').split(',')
+                if str(a_catering[1]) == str(business_name) and str(a_catering[2]) == str(business_postcode):
+                    #print (catering_id, a_catering, catering_id==a_catering)
+                    #if str(catering_id) == str(a_catering):
+                    return True
+    return False
+
+def get_catering_id(business_name, business_postcode):
+    with lock:
+        with open(providers_file) as f:
+            for a_catering in f.readlines():
+                a_catering = a_catering.rstrip('\n').split(',')
+                if str(a_catering[1]) == str(business_name) and str(a_catering[2]) == str(business_postcode):
+                    return a_catering[0]
+    return -1
+
+def get_supermarket_id(business_name, business_postcode):
+    with lock:
+        with open(providers_file2) as f:
+            for a_supermarket in f.readlines():
+                a_supermarket = a_supermarket.rstrip('\n').split(',')
+                if str(a_supermarket[1]) == str(business_name) and str(a_supermarket[2]) == str(business_postcode):
+                    return a_supermarket[0]
+    return -1
+
 ############ endpoints below
 
 @app.route('/registerCateringCompany')
@@ -257,8 +295,8 @@ def register_provider():
         if already_registered_provider(provider_id, postcode):
             return ('already registered\n')
         else:
-            register_new_provider(provider_id, postcode)
-            return ('registered new\n')
+            new_id = register_new_provider(provider_id, postcode)
+            return (str(new_id))
 
     return 'must specify provider_id'
 
@@ -272,8 +310,8 @@ def registerSupermarket():
         if already_registered_provider_(provider_id, postcode):
             return ('already registered\n')
         else:
-            register_new_provider_(provider_id, postcode)
-            return ('registered new\n')
+            new_id = register_new_provider_(provider_id, postcode)
+            return (str(new_id))
 
     return 'must specify provider_id'
 
@@ -289,9 +327,20 @@ def register_individual():
             return ('already registered\n')
         else:
             register_new_individual(individual_id, postcode, name, surname, phone_number)
-            return ('registered new\n')
+            return jsonify([postcode, name, surname, phone_number])
+            #return ('registered new\n')
 
     return 'must specify CHI'
+
+@app.route('/order_box')
+def order_box():
+    if 'urgency' in request.args:
+        urgency = request.args.get('urgency')
+
+        if urgency == '1':
+            return ('need to be delivered urgently')
+        else:
+            return ('not urgent delivery')
 
 
 @app.route('/requestStatus')
@@ -310,7 +359,7 @@ def cancelOrder():
 
         new_status = 0
 
-        found = update_order_status(order_id, DeliveryStatus.CANCELLED)
+        found = update_order_status(order_id, DeliveryStatus.CANCELLED, 'caterer')
 
         return str(found)
 
@@ -336,14 +385,25 @@ def get_food_boxes():
 
     return 'something is wrong'
 
+@app.route('/get_prices')
+def get_prices():
+    with lock:
+        with open(stock_file) as f:
+            all_prices = f.readlines()[1:]
+            all_prices = [[item.split(',')[0], item.split(',')[1], item.split(',')[2]] for item in all_prices]
+            print (all_prices)
+            return str(np.array(all_prices).flatten())
+
+
 @app.route('/placeOrder', methods=['POST'])
 def placeOrder():
     total_price = 0
     individual_max = False
-    if 'individual_id' in request.args and individual_is_registered(request.args.get('individual_id')):
+    if 'individual_id' in request.args and 'catering_business_name' in request.args and 'catering_postcode' in request.args and individual_is_registered(request.args.get('individual_id')) and catering_is_registered(request.args.get('catering_business_name'), request.args.get('catering_postcode')):
         if request.json != None:
             #dateTime = " ".join(request.args['dateTime'].split("_"))
             individual_id = request.args['individual_id']
+            catering_id = get_catering_id(request.args.get('catering_business_name'), request.args.get('catering_postcode'))
 
             items_ordered = []
 
@@ -361,13 +421,13 @@ def placeOrder():
                 #    individual_max = True
 
             if True:#total_quantity <= 10 and not individual_max:
-                new_order_id = place_order_(items_ordered, individual_id)
+                new_order_id = place_order_(items_ordered, individual_id, catering_id)
             else:
                 new_order_id = -1
 
         return str(new_order_id)# + "_" + str(total_price)
     else:
-        return 'must provide individual_id, and the individual must be registered before placing an order'
+        return 'must provide individual_id and catering_id. The individual and the catering must be registered before placing an order'
 
 
 @app.route('/editOrder', methods=['POST'])
@@ -391,6 +451,21 @@ def editOrder():
         return 'must provide order_id'
 
 
+
+@app.route('/request_order_status')
+def request_order_status():
+    if 'order_id' in request.args:
+        order_status = -2
+
+        with lock:
+            with open(orders_file) as f:
+                all_orders = f.readlines()[1:]
+
+                order_status = sum([int(item.split('\n')[0].split(',')[-1]) if int(item.split('\n')[0].split(',')[0])==int(request.args['order_id']) else 0 for item in all_orders])
+
+    return str(order_status)
+
+
 @app.route('/updateOrderStatus')
 def update_order_status_():
     if 'order_id' in request.args and 'newStatus' in request.args:
@@ -404,7 +479,7 @@ def update_order_status_():
             new_status = DeliveryStatus.DISPATCHED
 
         if new_status != None:
-            found = update_order_status(order_id, new_status)
+            found = update_order_status(order_id, new_status, 'caterer')
             return str(found)
         else:
             return 'can either deliver, pack, or dispatch the order'
@@ -458,6 +533,76 @@ def get_caterers():
             content = [item.rstrip('\n') for item in content]
     return jsonify(content)
 
+@app.route('/getCateringCompanyforOrder')
+def get_catering_company_for_order():
+    if 'order_id' in request.args:
+        with lock:
+            with open(orders_file) as f:
+                content = f.readlines()
+                content = [item.rstrip('\n') for item in content]
+
+                for idx, item in enumerate(content):
+                    if str(item.split(',')[0]) == str(request.args.get('order_id')):
+                        with open(providers_file) as f2:
+                            content2 = f2.readlines()
+                            content2 = [item_.rstrip('\n') for item_ in content2]
+
+                            for item2 in content2:
+                                if str(item2.split(',')[0]) == str(item.split(',')[16]):
+                                    return jsonify([item2.split(',')[1], item2.split(',')[2]])
+        return str(-1)
+
+    return 'must specify order_id'
+
+
+@app.route('/recordSupermarketOrder')
+def record_supermarket_order():
+    if 'individual_id' in request.args and 'order_number' in request.args and 'supermarket_business_name' in request.args and 'supermarket_postcode' in request.args and individual_is_registered(request.args.get('individual_id')) and get_supermarket_id(request.args.get('supermarket_business_name'), request.args.get('supermarket_postcode')) != -1:
+
+        individual_id = request.args['individual_id']
+        supermarket_id = get_supermarket_id(request.args.get('supermarket_business_name'), request.args.get('supermarket_postcode'))
+
+        with lock:
+            num_lines = sum(1 for line in open(sup_orders_file))
+            new_order_id = num_lines+1
+            new_record = str(new_order_id)
+
+            with open(sup_orders_file, 'a+') as f:
+                new_record += ","+individual_id
+                new_record += ","+supermarket_id
+                new_record += ","+strftime("%Y-%m-%dT%H:%M:%S", gmtime()) #ordered time
+                new_record += "," #packed time
+                new_record += "," #dispatched time
+                new_record += "," #delivered time
+                new_record += ","+str(DeliveryStatus.NONE)
+                new_record += "\n"
+                f.write(new_record)
+
+            return str(new_order_id)
+
+    return 'require individual_id, order_number, supermarket_business_name, and supermarket_postcode. The individual must be registered and the supermarket must be registered'
+
+
+@app.route('/updateSupermarketOrderStatus')
+def update_supermarket_order_status():
+    if 'order_id' in request.args and 'newStatus' in request.args:
+        order_id = request.args.get('order_id')
+        new_status = None
+
+        if request.args['newStatus'].lower() == 'delivered':
+            new_status = DeliveryStatus.DELIVERED
+        elif request.args['newStatus'].lower() == 'packed':
+            new_status = DeliveryStatus.PACKED
+        elif request.args['newStatus'].lower() == 'dispatched':
+            new_status = DeliveryStatus.DISPATCHED
+
+        if new_status != None:
+            found = update_order_status(order_id, new_status, 'supermarket')
+            return str(found)
+        else:
+            return 'can either deliver, pack, or dispatch the order'
+
+    return 'must provide order_id and newStatus'
 
 if __name__ == '__main__':
     app.run(host= '0.0.0.0', threaded=False, processes=10)
