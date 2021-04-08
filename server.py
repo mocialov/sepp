@@ -313,7 +313,7 @@ def registerSupermarket():
             return ('already registered\n')
         else:
             new_id = register_new_provider_(provider_id, postcode)
-            return (str(new_id))
+            return ('registered new') #return (str(new_id))
 
     return 'must specify provider_id'
 
