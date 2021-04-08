@@ -66,8 +66,9 @@ def already_registered_provider(provider_id, postcode):
                 all_providers = f.readlines()
                 all_providers = [item.split('\n')[0] for item in all_providers]
                 for a_provider in all_providers:
-                    if str(provider_id) in a_provider.split(',')[1] and str(postcode) in a_provider.split(',')[2]:
-                        return True
+                    if len(a_provider.split(',')) > 1:
+                        if str(provider_id) in a_provider.split(',')[1] and str(postcode) in a_provider.split(',')[2]:
+                            return True
     return False
 
 def register_new_provider(provider_id, postcode):
@@ -85,8 +86,9 @@ def already_registered_provider_(provider_id, postcode):
                 all_providers = f.readlines()
                 all_providers = [item.split('\n')[0] for item in all_providers]
                 for a_provider in all_providers:
-                    if str(provider_id) in a_provider.split(',')[1] and str(postcode) in a_provider.split(',')[2]:
-                        return True
+                    if len(a_provider.split(',')) > 1:
+                        if str(provider_id) in a_provider.split(',')[1] and str(postcode) in a_provider.split(',')[2]:
+                            return True
     return False
 
 def register_new_provider_(provider_id, postcode):
@@ -296,7 +298,7 @@ def register_provider():
             return ('already registered\n')
         else:
             new_id = register_new_provider(provider_id, postcode)
-            return (str(new_id))
+            return ('registered new') #return (str(new_id))
 
     return 'must specify provider_id'
 
@@ -495,8 +497,8 @@ def distance():
         edinburgh_diameter = 18334 #m
         max_cost = 99*10 + 25*2 + 9
 
-        postcode1 = postcode1.replace('EH', '') #assuming edinburgh
-        postcode2 = postcode2.replace('EH', '') #assuming edinburgh
+        postcode1 = postcode1.replace('EH', '', 1) #assuming edinburgh
+        postcode2 = postcode2.replace('EH', '', 1) #assuming edinburgh
 
         postcode1 = postcode1.split('_')
         postcode1_first_part = postcode1[0]
