@@ -1,1 +1,1 @@
-order_id,cucumbers,tomatoes,onions,carrots,beef,pork,chicken,bacon,oranges,apples,avocado,mango,cabbage,cheese,individual_id,ordered_datetime,packed_date_time,dispatched_date_time,delivered_date_time,status
+order_id,cucumbers,tomatoes,onions,carrots,beef,pork,chicken,bacon,oranges,apples,avocado,mango,cabbage,cheese,individual_id,catering_id,ordered_datetime,packed_date_time,dispatched_date_time,delivered_date_time,status
