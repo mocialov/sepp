@@ -563,6 +563,7 @@ def record_supermarket_order():
 
         individual_id = request.args['individual_id']
         supermarket_id = get_supermarket_id(request.args.get('supermarket_business_name'), request.args.get('supermarket_postcode'))
+        order_number = request.args['order_number']
 
         with lock:
             num_lines = sum(1 for line in open(sup_orders_file))
@@ -580,7 +581,7 @@ def record_supermarket_order():
                 new_record += "\n"
                 f.write(new_record)
 
-            return True #str(new_order_id)
+            return 'True' #str(new_order_id)
 
     return 'require individual_id, order_number, supermarket_business_name, and supermarket_postcode. The individual must be registered and the supermarket must be registered'
 
