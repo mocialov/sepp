@@ -580,7 +580,7 @@ def record_supermarket_order():
                 new_record += "\n"
                 f.write(new_record)
 
-            return str(new_order_id)
+            return True #str(new_order_id)
 
     return 'require individual_id, order_number, supermarket_business_name, and supermarket_postcode. The individual must be registered and the supermarket must be registered'
 
