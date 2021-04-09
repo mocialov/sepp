@@ -25,6 +25,7 @@ Returns status integer or -1 if order not found
 
 5) curl 'localhost:5000/registerCateringCompany?business_name=catering1&postcode=eh0111'
 
+(The server does not verify the postcode. This means that the postcode can be almost anything)
 Returns: registered new / already registered
 
 6) curl 'localhost:5000/cancelOrder?order_id=42'
@@ -33,6 +34,7 @@ Returns: true or false
 
 7) curl 'localhost:5000/registerSupermarket?business_name=catering1&postcode=eh0111'
 
+(The server does not verify the postcode. This means that the postcode can be almost anything)
 Returns: registered new / already registered
 
 8) curl 'localhost:5000/updateOrderStatus?order_id=42&newStatus=packed' (packed/dispatched/delivered)
