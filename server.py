@@ -295,7 +295,7 @@ def register_provider():
         postcode = request.args.get('postcode')
 
         if already_registered_provider(provider_id, postcode):
-            return ('already registered\n')
+            return ('already registered')
         else:
             new_id = register_new_provider(provider_id, postcode)
             return ('registered new') #return (str(new_id))
@@ -310,7 +310,7 @@ def registerSupermarket():
         postcode = request.args.get('postcode')
 
         if already_registered_provider_(provider_id, postcode):
-            return ('already registered\n')
+            return ('already registered')
         else:
             new_id = register_new_provider_(provider_id, postcode)
             return ('registered new') #return (str(new_id))
@@ -326,7 +326,7 @@ def register_individual():
         postcode, name, surname, phone_number = PHS.verifyShieldingIndividual(individual_id)
 
         if already_registered(individual_id):
-            return ('already registered\n')
+            return ('already registered')
         else:
             register_new_individual(individual_id, postcode, name, surname, phone_number)
             return jsonify([postcode, name, surname, phone_number])
@@ -567,7 +567,7 @@ def record_supermarket_order():
         with lock:
             num_lines = sum(1 for line in open(sup_orders_file))
             new_order_id = num_lines+1
-            new_record = str(new_order_id)
+            new_record = str(order_number) #str(new_order_id)
 
             with open(sup_orders_file, 'a+') as f:
                 new_record += ","+individual_id
