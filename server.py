@@ -561,6 +561,7 @@ def get_catering_company_for_order():
 def record_supermarket_order():
     if 'individual_id' in request.args and 'order_number' in request.args and 'supermarket_business_name' in request.args and 'supermarket_postcode' in request.args and individual_is_registered(request.args.get('individual_id')) and get_supermarket_id(request.args.get('supermarket_business_name'), request.args.get('supermarket_postcode')) != -1:
 
+        order_number = request.args['order_number']
         individual_id = request.args['individual_id']
         supermarket_id = get_supermarket_id(request.args.get('supermarket_business_name'), request.args.get('supermarket_postcode'))
 
