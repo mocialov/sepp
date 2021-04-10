@@ -262,10 +262,11 @@ def catering_is_registered(business_name, business_postcode):
         with open(providers_file) as f:
             for a_catering in f.readlines():
                 a_catering = a_catering.rstrip('\n').split(',')
-                if str(a_catering[1]) == str(business_name) and str(a_catering[2]) == str(business_postcode):
-                    #print (catering_id, a_catering, catering_id==a_catering)
-                    #if str(catering_id) == str(a_catering):
-                    return True
+                if len(a_catering) > 1:
+                    if str(a_catering[1]) == str(business_name) and str(a_catering[2]) == str(business_postcode):
+                        #print (catering_id, a_catering, catering_id==a_catering)
+                        #if str(catering_id) == str(a_catering):
+                        return True
     return False
 
 def get_catering_id(business_name, business_postcode):
@@ -273,8 +274,9 @@ def get_catering_id(business_name, business_postcode):
         with open(providers_file) as f:
             for a_catering in f.readlines():
                 a_catering = a_catering.rstrip('\n').split(',')
-                if str(a_catering[1]) == str(business_name) and str(a_catering[2]) == str(business_postcode):
-                    return a_catering[0]
+                if len(a_catering) > 1:
+                    if str(a_catering[1]) == str(business_name) and str(a_catering[2]) == str(business_postcode):
+                        return a_catering[0]
     return -1
 
 def get_supermarket_id(business_name, business_postcode):
@@ -282,8 +284,9 @@ def get_supermarket_id(business_name, business_postcode):
         with open(providers_file2) as f:
             for a_supermarket in f.readlines():
                 a_supermarket = a_supermarket.rstrip('\n').split(',')
-                if str(a_supermarket[1]) == str(business_name) and str(a_supermarket[2]) == str(business_postcode):
-                    return a_supermarket[0]
+                if len(a_supermarket) > 1:
+                    if str(a_supermarket[1]) == str(business_name) and str(a_supermarket[2]) == str(business_postcode):
+                        return a_supermarket[0]
     return -1
 
 ############ endpoints below
@@ -556,6 +559,14 @@ def get_catering_company_for_order():
 
     return 'must specify order_id'
 
+def order_exists(order_number):
+    with open(sup_orders_file) as f:
+        for a_line in f.readlines():
+            if len(a_line.split(',')) > 0:
+                if str(a_line.split(',')[0]) == str(order_number):
+                    return True
+    return False
+
 
 @app.route('/recordSupermarketOrder')
 def record_supermarket_order():
@@ -565,9 +576,11 @@ def record_supermarket_order():
         individual_id = request.args['individual_id']
         supermarket_id = get_supermarket_id(request.args.get('supermarket_business_name'), request.args.get('supermarket_postcode'))
 
+        if order_exists(order_number): return 'False'
+
         with lock:
-            num_lines = sum(1 for line in open(sup_orders_file))
-            new_order_id = num_lines+1
+            #num_lines = sum(1 for line in open(sup_orders_file))
+            #new_order_id = num_lines+1
             new_record = str(order_number) #str(new_order_id)
 
             with open(sup_orders_file, 'a+') as f:
@@ -581,7 +594,7 @@ def record_supermarket_order():
                 new_record += "\n"
                 f.write(new_record)
 
-            return True #str(new_order_id)
+            return 'True' #str(new_order_id)
 
     return 'require individual_id, order_number, supermarket_business_name, and supermarket_postcode. The individual must be registered and the supermarket must be registered'
 
