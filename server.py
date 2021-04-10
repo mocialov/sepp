@@ -49,7 +49,7 @@ class PHS(object):
 
 
 class DeliveryStatus:
-    NONE = 0
+    PLACED = 0
     PACKED = 1
     DISPATCHED = 2
     DELIVERED = 3
@@ -152,7 +152,7 @@ def place_order_(items_ordered, individual_id, catering_id):
                 new_record += "," #packed time
                 new_record += "," #dispatched time
                 new_record += "," #delivered time
-                new_record += ","+str(DeliveryStatus.NONE)
+                new_record += ","+str(DeliveryStatus.PLACED)
                 new_record += "\n"
 
                 f.write(new_record)
@@ -169,7 +169,7 @@ def update_order_(items_ordered, order_id):
             with open(orders_file) as f:
                 for an_order in f.readlines():
                     print (an_order.split(',')[0], order_id)
-                    if an_order.split(',')[0] == order_id and an_order.split(',')[-1].rstrip('\n') == str(DeliveryStatus.NONE):
+                    if an_order.split(',')[0] == order_id and an_order.split(',')[-1].rstrip('\n') == str(DeliveryStatus.PLACED):
                         print ('found')
                         found = True
                         new_record = str(order_id)
@@ -183,7 +183,7 @@ def update_order_(items_ordered, order_id):
                         new_record += ","+an_order.split(",")[len(an_order.split(','))-5]
                         new_record += ","+an_order.split(",")[len(an_order.split(','))-4]
                         new_record += ",,"
-                        new_record += ","+str(DeliveryStatus.NONE)
+                        new_record += ","+str(DeliveryStatus.PLACED)
                         new_record += "\n"
 
                         if not trying_to_increase_quantity:
@@ -590,7 +590,7 @@ def record_supermarket_order():
                 new_record += "," #packed time
                 new_record += "," #dispatched time
                 new_record += "," #delivered time
-                new_record += ","+str(DeliveryStatus.NONE)
+                new_record += ","+str(DeliveryStatus.PLACED)
                 new_record += "\n"
                 f.write(new_record)
 
