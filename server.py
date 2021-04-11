@@ -145,7 +145,7 @@ def place_order_(items_ordered, individual_id, catering_id):
             with open(orders_file, 'a') as f:
 
                 for i in range(1, len(known_items)+1):
-                    new_record += ","+str(sum([item[1] if int(item[0]) == i else 0 for item in items_ordered])) if i in [item[0] for item in items_ordered] else ",0"
+                    new_record += ","+str(sum([int(item[1]) if int(item[0]) == i else 0 for item in items_ordered])) if i in [item[0] for item in items_ordered] else ",0"
                 new_record += ","+individual_id
                 new_record += ","+catering_id
                 new_record += ","+strftime("%Y-%m-%dT%H:%M:%S", gmtime()) #ordered time
@@ -174,10 +174,10 @@ def update_order_(items_ordered, order_id):
                         found = True
                         new_record = str(order_id)
                         for i in range(1, len(known_items)+1):
-                            if int(an_order.split(',')[i]) < int(sum([item[1] if int(item[0]) == i else 0 for item in items_ordered])):
+                            if int(an_order.split(',')[i]) < int(sum([int(item[1]) if int(item[0]) == i else 0 for item in items_ordered])):
                                 trying_to_increase_quantity = True
 
-                            new_record += ","+str(sum([item[1] if int(item[0]) == i else 0 for item in items_ordered])) if i in [item[0] for item in items_ordered] else ",0"
+                            new_record += ","+str(sum([int(item[1]) if int(item[0]) == i else 0 for item in items_ordered])) if i in [item[0] for item in items_ordered] else ",0"
                         new_record += ","+an_order.split(",")[len(an_order.split(','))-7]
                         new_record += ","+an_order.split(",")[len(an_order.split(','))-6]
                         new_record += ","+an_order.split(",")[len(an_order.split(','))-5]
