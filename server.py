@@ -575,6 +575,7 @@ def record_supermarket_order():
         order_number = request.args['order_number']
         individual_id = request.args['individual_id']
         supermarket_id = get_supermarket_id(request.args.get('supermarket_business_name'), request.args.get('supermarket_postcode'))
+        order_number = request.args['order_number']
 
         if order_exists(order_number): return 'False'
 
